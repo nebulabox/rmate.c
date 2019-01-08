@@ -84,9 +84,13 @@ int send_open(int sockfd, const char* filename, int fd) {
         perror("stat");
         return -1;
     }
-    
+
+    if (st.st_size == 0) {
+        perror("Cannot open empty file to edit.");
+        return -1;
+    }
     if((fdata = mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED) {
-        perror("mmap");
+        fprintf(stderr, "send_open:mmap");
         return -1;
     }
     
@@ -119,7 +123,7 @@ int receive_save(int sockfd, char* rem_buf, size_t rem_buf_len, const char* file
     }
     
     if((fdata = mmap(NULL, filesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) {
-        perror("mmap");
+        perror("receive_save:mmap");
         return -1;
     }
     
@@ -316,8 +320,11 @@ int main(int argc, char *argv[])
         return -1;
     }
     
-    send_open(sockfd, filename, fd);
+    int ret = send_open(sockfd, filename, fd);
     close(fd);
+    if (ret < 0) {
+        return -1;
+    }
 
     while(1) {
 	    char buf[MAXDATASIZE];
